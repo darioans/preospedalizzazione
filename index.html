@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>PDTA Preospedalizzazione</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+:root{
+  --primary:#0f2044;--primary2:#1a3460;--teal:#0d9488;--teal2:#0f766e;
+  --amber:#d97706;--red:#dc2626;--green:#059669;--purple:#7c3aed;
+  --bg:#eef2f7;--card:#fff;--border:#e2e8f0;
+  --text:#1e293b;--text2:#64748b;--text3:#94a3b8;
+  --sh:0 2px 8px rgba(0,0,0,.07),0 0 0 1px rgba(0,0,0,.03);
+  --sh2:0 8px 28px rgba(0,0,0,.12);--r:14px;--r2:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Outfit',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:16px;line-height:1.55;}
+button{font-family:inherit;cursor:pointer;transition:all .15s ease;}
+input,select{font-family:inherit;}
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{opacity:1;}
+
+/* Cards */
+.card{background:var(--card);border-radius:var(--r);border:1px solid var(--border);box-shadow:var(--sh);}
+
+/* Section headers */
+.sh{padding:11px 16px;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--border);
+    font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--text);}
+.sg{padding:8px 6px;display:grid;grid-template-columns:1fr 1fr;gap:1px;}
+
+/* Checkboxes */
+.cbl{display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:6px 9px;border-radius:9px;transition:background .1s;}
+.cbl:hover{background:#f8fafc;}
+.cbl.hl{background:#fef2f2;}
+.cbt{font-size:13px;line-height:1.45;color:var(--text2);}
+.cbt.on{color:var(--text);}
+.cbt.hlon{color:#991b1b;font-weight:600;}
+
+/* Inputs */
+.inp{width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:var(--r2);
+     font-size:14px;outline:none;background:white;transition:border-color .15s,box-shadow .15s;}
+.inp:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(15,32,68,.1);}
+.ilb{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+.b-g{background:#d1fae5;color:#065f46;}
+.b-a{background:#fef3c7;color:#92400e;}
+.b-r{background:#fee2e2;color:#991b1b;}
+.b-b{background:#dbeafe;color:#1e40af;}
+.b-s{background:#f1f5f9;color:#475569;}
+.b-p{background:#ede9fe;color:#5b21b6;}
+
+/* Alerts */
+.alert{border-radius:12px;padding:14px 16px;margin-bottom:12px;border-left:4px solid;display:flex;flex-direction:column;gap:5px;}
+.al-pu{background:#f5f3ff;border-color:#7c3aed;}
+.al-am{background:#fffbeb;border-color:#d97706;}
+.al-re{background:#fef2f2;border-color:#dc2626;}
+.al-bl{background:#eff6ff;border-color:#3b82f6;}
+.al-gr{background:#f0fdf4;border-color:#059669;}
+.al-or{background:#fff7ed;border-color:#ea580c;}
+.alert .at{font-weight:700;font-size:13px;}
+
+/* Buttons */
+.btn{border:none;border-radius:var(--r2);padding:11px 22px;font-size:14px;font-weight:600;}
+.btn-p{background:var(--primary);color:white;box-shadow:0 3px 10px rgba(15,32,68,.25);}
+.btn-p:hover{background:var(--primary2);}
+.btn-p:disabled{background:#e2e8f0;color:var(--text3);cursor:not-allowed;box-shadow:none;}
+.btn-s{background:white;color:var(--text2);border:1.5px solid var(--border);}
+.btn-s:hover{border-color:var(--text2);background:#f8fafc;}
+
+/* Exam cards */
+.excard{border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;}
+
+@media print{
+  .np{display:none!important;}
+  body{background:white;font-size:9pt;margin:0;padding:0;}
+  .card{box-shadow:none!important;break-inside:avoid;}
+  .alert{break-inside:avoid;}
+  .print-page{max-width:100%!important;padding:4px!important;margin:0!important;}
+  [contenteditable]{border:1.5px solid #999!important;}
+}
+@media(max-width:600px){
+  .sg{grid-template-columns:1fr;}
+  .dg{grid-template-columns:1fr 1fr!important;}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useMemo,useEffect}=React;
+
+/* ═══════════════════ PROCEDURES DATA ═══════════════════ */
+const px=(n,c,hbr,cr,f={})=>({name:n,complexity:c,highBleedingRisk:hbr,cardiacRisk:cr,...f});
+const PROCEDURES={
+"Chirurgia Generale":[
+  px("Ernia femorale","bassa",false,"basso"),px("Ernia inguinale (aperta)","bassa",false,"basso"),
+  px("Laparoscopia diagnostica","bassa",false,"basso"),px("Ernia ventrale","bassa",false,"basso"),
+  px("Esame anorettale in anestesia ± biopsia","bassa",false,"basso"),
+  px("Accesso chirurgico per emodialisi","bassa",false,"basso"),
+  px("Accesso chirurgico per dialisi peritoneale","bassa",false,"basso"),
+  px("Posizionamento BIB (palloncino intragastrico)","bassa",false,"basso"),
+  px("Appendicectomia (aperta o laparoscopica)","bassa",false,"basso"),
+  px("Ernia ombelicale/paraombelicale","bassa",false,"basso"),
+  px("Ernia epigastrica","bassa",false,"basso"),
+  px("Tumori cutanei senza ricostruzione","bassa",false,"basso"),
+  px("Colostomia/ileostomia laparoscopica","intermedia",false,"intermedio"),
+  px("Posizionamento bendaggio gastrico regolabile","intermedia",false,"intermedio"),
+  px("Rimozione bendaggio gastrico regolabile","intermedia",false,"intermedio"),
+  px("Colostomia/ileostomia derivativa","intermedia",false,"intermedio"),
+  px("Adenolisi","intermedia",false,"intermedio"),
+  px("Chiusura di stomia","intermedia",true,"intermedio"),
+  px("Ooforectomia","intermedia",false,"intermedio"),
+  px("Paratiroidectomia","intermedia",false,"intermedio"),
+  px("Tiroidectomia (lobectomia)","intermedia",false,"intermedio",{isThyroid:true}),
+  px("Tiroidectomia totale","intermedia",true,"intermedio",{isThyroid:true}),
+  px("Plastica laparocele aperta/VLS","intermedia",false,"intermedio"),
+  px("Colecistectomia aperta/VLS","intermedia",false,"intermedio"),
+  px("Salpingo/ovariectomia","intermedia",false,"intermedio"),
+  px("Riparazione ernia inguinale VLS","intermedia",false,"basso"),
+  px("Resezione dell'intestino tenue","intermedia",true,"intermedio"),
+  px("Resezione transanale di tumore","intermedia",true,"intermedio"),
+  px("Surrenectomia VLS/aperta","intermedia",true,"intermedio"),
+  px("Melanomi + LNS","intermedia",false,"basso"),
+  px("Sleeve Gastrectomy","alta",true,"alto"),
+  px("Isterectomia (Ch.Gen.)","alta",true,"alto"),
+  px("Colectomia totale","alta",true,"alto"),
+  px("Altre procedure vie biliari","alta",true,"alto"),
+  px("Ricanalizzazione colostomia/ileostomia","alta",true,"alto"),
+  px("Resezione Antero-Posteriore perineale","alta",true,"alto"),
+  px("Resezione Antero-Posteriore addominale","alta",true,"alto"),
+  px("Resezione epatica maggiore","alta",true,"alto"),
+  px("Esofagectomia","alta",true,"alto"),
+  px("Procedura di Hartmann","alta",true,"alto"),
+  px("By-pass gastrico","alta",true,"alto"),
+  px("Gastrectomia parziale","alta",true,"alto"),
+  px("Splenectomia","alta",true,"intermedio"),
+  px("Emicolectomia destra","alta",true,"alto"),
+  px("Gastrectomia totale","alta",true,"alto"),
+  px("Resezione anteriore del retto","alta",true,"alto"),
+  px("DCP (pancreaticoduodenectomia)","alta",true,"alto"),
+  px("Epatico-digiunostomia","alta",true,"alto"),
+  px("Proctocolectomia","alta",true,"alto"),
+  px("Pancreasectomia distale","alta",true,"alto"),
+  px("Colectomia parziale","alta",true,"alto"),
+  px("Colectomia laparoscopica assistita","alta",true,"alto"),
+],
+"Ginecologia":[
+  px("Conizzazione della cervice uterina","bassa",false,"basso"),
+  px("Isteroscopia operativa","bassa",false,"basso"),
+  px("Metroplastica uterina assistita laparoscopicamente","bassa",false,"basso"),
+  px("Marsupializzazione ascesso ghiandola del Bartolino","bassa",false,"basso"),
+  px("Miomectomia resettoscopica","bassa",false,"basso"),
+  px("Skin vulvectomy","bassa",false,"basso"),
+  px("Asportazione formazione vulvare o vaginale","bassa",false,"basso"),
+  px("Asportazione polipo della cervice uterina","bassa",false,"basso"),
+  px("Diatermocoagulazione vulvovaginale","bassa",false,"basso"),
+  px("Resettoscopia","bassa",false,"basso"),
+  px("Dilatazione e raschiamento uterino","bassa",false,"basso"),
+  px("Dilatazione e raschiamento diagnostico","bassa",false,"basso"),
+  px("Miomectomia laparotomica o laparoscopica","intermedia",true,"intermedio"),
+  px("Annessectomia laparotomica o laparoscopica","intermedia",false,"intermedio"),
+  px("Asportazione cisti ovarica laparotomica o laparoscopica","intermedia",false,"intermedio"),
+  px("Asportazione endometriosi pelvica","intermedia",false,"intermedio"),
+  px("Salpingectomia mono/bilaterale laparotomica o laparoscopica","intermedia",false,"intermedio"),
+  px("Asportazione gravidanza tubarica","intermedia",false,"intermedio"),
+  px("Trachelectomia vaginale","intermedia",false,"intermedio"),
+  px("Plastica vaginale anteriore/posteriore o entrambe","intermedia",false,"intermedio"),
+  px("Laparotomia o laparoscopia esplorativa","intermedia",false,"intermedio"),
+  px("Asportazione ghiandola del Bartolino","intermedia",false,"basso"),
+  px("Isterectomia radicale laparotomica/laparoscopica","alta",true,"alto"),
+  px("Isterectomia vaginale assistita laparoscopicamente","alta",true,"alto"),
+  px("Vulvectomia radicale","alta",true,"alto"),
+  px("Emivulvectomia radicale","alta",true,"alto"),
+  px("Isterectomia addominale laparotomica/laparoscopica","alta",true,"alto"),
+  px("Isterectomia vaginale","alta",true,"alto"),
+  px("Linfadenectomia inguinale","alta",true,"alto"),
+  px("Pelvectomia anteriore/posteriore/totale","alta",true,"alto"),
+  px("Citoriduzione","alta",true,"alto"),
+  px("Linfadenectomia pelvica e aortica","alta",true,"alto"),
+],
+"Otorinolaringoiatria":[
+  px("Rimozione corpi estranei naso-orecchio","bassa",false,"basso"),
+  px("Miringotomia/drenaggio transtimpanico","bassa",false,"basso"),
+  px("Incisione ematoma del padiglione auricolare","bassa",false,"basso"),
+  px("Riduzione volumetrica dei turbinati nasali","bassa",false,"basso"),
+  px("Asportazione calcoli salivari per via endorale","bassa",false,"basso"),
+  px("Riduzione di frattura delle ossa nasali","bassa",false,"basso"),
+  px("Biopsie del cavo orale/orofaringeo/naso","bassa",false,"basso"),
+  px("DISE (Drug Induced Sleep Endoscopy)","bassa",false,"basso"),
+  px("Asportazione lesioni cutanee volto/collo","bassa",false,"basso"),
+  px("Sutura di ferita del volto/collo","bassa",false,"basso"),
+  px("Intervento per ranula/frenulotomia","bassa",false,"basso"),
+  px("Incisione di ascesso peritonsillare","bassa",false,"basso"),
+  px("Biopsie linfonodali","bassa",false,"basso"),
+  px("Adenoidectomia","bassa",false,"basso"),
+  px("Uvulotomia","bassa",false,"basso"),
+  px("Scialectomia sottomandibolare","bassa",false,"basso"),
+  px("Marsupializzazione ranula sottolinguale","bassa",false,"basso"),
+  px("Caldwel-Luc","bassa",false,"basso"),
+  px("Cisti mascellari","bassa",false,"basso"),
+  px("Drenaggio ascesso del collo","bassa",false,"basso"),
+  px("Decongestione turbinati inferiori","bassa",false,"basso"),
+  px("Parotidectomia esofacciale (parziale)","intermedia",false,"intermedio"),
+  px("FESS (chirurgia video endoscopica seni paranasali)","intermedia",false,"intermedio"),
+  px("Asportazione cisti mediana del collo","intermedia",false,"intermedio"),
+  px("Asportazione cisti laterale del collo","intermedia",false,"intermedio"),
+  px("Rinosettoplastica","intermedia",false,"intermedio"),
+  px("Timpanoplastica","intermedia",false,"intermedio"),
+  px("Tonsillectomia e adenotonsillectomia","intermedia",false,"intermedio"),
+  px("Svuotamento laterocervicale selettivo","intermedia",true,"intermedio"),
+  px("Miringoplastica","intermedia",false,"intermedio"),
+  px("Microlaringoscopia","intermedia",false,"intermedio"),
+  px("Asportazione neoformazioni condotto uditivo/padiglione","intermedia",false,"intermedio"),
+  px("Faringoplastica","intermedia",false,"intermedio"),
+  px("Tracheotomia","intermedia",false,"intermedio"),
+  px("Stapedotomia","intermedia",false,"intermedio"),
+  px("Revisione/chiusura di tracheostoma","intermedia",false,"intermedio"),
+  px("Svuotamento laterocervicale radicale","alta",true,"alto"),
+  px("Controllo emorragie tramite legatura di arteria","alta",true,"alto"),
+  px("Cervicotomia per ascesso profondo del collo","alta",true,"alto"),
+  px("Pelvi-glossectomia","alta",true,"alto"),
+  px("Asportazione tumori nasali per via esterna","alta",true,"alto"),
+  px("Decompressione del VII nervo cranico","alta",false,"alto"),
+  px("Chirurgia di stenosi laringea","alta",false,"alto"),
+  px("Decompressione orbitaria","alta",false,"alto"),
+  px("Laringectomie","alta",true,"alto"),
+  px("Ricostruzione con lembi liberi o peduncolati","alta",true,"alto"),
+  px("Bucco-faringectomia","alta",true,"alto"),
+  px("Chirurgia orecchio interno/APC (neurinoma, impianto cocleare)","alta",false,"alto"),
+  px("Parotidectomia radicale","alta",false,"alto"),
+  px("Chirurgia del basicranio","alta",false,"alto"),
+],
+"Ortopedia":[
+  px("Meniscectomia selettiva ginocchio","bassa",false,"basso"),
+  px("Artroscopia diagnostica spalla/ginocchio","bassa",false,"basso"),
+  px("Asportazione cisti tendinea","bassa",false,"basso"),
+  px("Neurolisi del mediano al carpo","bassa",false,"basso"),
+  px("Rimozione mezzi di sintesi","bassa",false,"basso"),
+  px("Correzione piede piatto (ortesi endo/eso senotarsica)","bassa",false,"basso"),
+  px("Osteotomia metatarsale (Weil e similari)","bassa",false,"basso"),
+  px("Puleggiotomia in dito a scatto","bassa",false,"basso"),
+  px("Liberazione De Quervain","bassa",false,"basso"),
+  px("Trattamento chirurgico epicondilite","bassa",false,"basso"),
+  px("Correzione dito a martello/griffe","bassa",false,"basso"),
+  px("Rizoartrosi","bassa",false,"basso"),
+  px("M. di Dupuytren","bassa",false,"basso"),
+  px("Cisti articolari","bassa",false,"basso"),
+  px("Sutura meniscale","bassa",false,"basso"),
+  px("Tenosinoviti","bassa",false,"basso"),
+  px("Lesioni tendinee","bassa",false,"basso"),
+  px("Fratture falange/metacarpo","bassa",false,"basso"),
+  px("Ricostruzione legamento crociato anteriore (LCA)","intermedia",true,"intermedio",{isMajorOrthopedic:true}),
+  px("Osteotomia correttiva in deformità monoplanare","intermedia",true,"intermedio",{isMajorOrthopedic:true}),
+  px("Asportazione aponeurosi plantare/palmare","intermedia",false,"intermedio"),
+  px("Osteotomia calcaneale di traslazione","intermedia",true,"intermedio",{isMajorOrthopedic:true}),
+  px("Riparazione cuffia dei rotatori della spalla","intermedia",true,"intermedio",{isMajorOrthopedic:true,isShoulderHumerus:true}),
+  px("Patologie tumorali senza ricostruzione (Ort.)","intermedia",false,"intermedio"),
+  px("Ricostruzione legamentosa ginocchio/gomito","intermedia",true,"intermedio",{isMajorOrthopedic:true}),
+  px("Pseudoartrosi ossee/viziosa saldatura di frattura","intermedia",true,"intermedio",{isMajorOrthopedic:true}),
+  px("Procedura di Latarjet open","intermedia",true,"intermedio",{isMajorOrthopedic:true,isShoulderHumerus:true}),
+  px("Reinserzione tendine bicipitale distale","intermedia",true,"intermedio",{isMajorOrthopedic:true}),
+  px("Trasposizione gran dorsale","intermedia",true,"intermedio",{isMajorOrthopedic:true,isShoulderHumerus:true}),
+  px("Amputazione piccoli segmenti","intermedia",false,"intermedio"),
+  px("Interventi sul polso","intermedia",false,"intermedio"),
+  px("Patologia Malformativa","intermedia",false,"intermedio"),
+  px("Rigidità post-traumatica","intermedia",false,"intermedio"),
+  px("Protesi piccole articolazioni","intermedia",true,"intermedio",{isMajorOrthopedic:true}),
+  px("Artroprotesi primaria di anca","alta",true,"intermedio",{isMajorOrthopedic:true}),
+  px("Amputazioni grossi segmenti","alta",true,"alto"),
+  px("Osteotomie acetabolari","alta",true,"intermedio",{isMajorOrthopedic:true}),
+  px("Correzione deformità complesse arti superiori/inferiori","alta",true,"intermedio",{isMajorOrthopedic:true}),
+  px("Artroprotesi primaria di ginocchio","alta",true,"intermedio",{isMajorOrthopedic:true}),
+  px("Revisione protesi di ginocchio","alta",true,"intermedio",{isMajorOrthopedic:true}),
+  px("Osteotomie femorali prossimali e distali","alta",true,"intermedio",{isMajorOrthopedic:true}),
+  px("Artroprotesi primaria di caviglia","alta",true,"intermedio",{isMajorOrthopedic:true}),
+  px("Artroprotesi primaria di spalla","alta",true,"intermedio",{isMajorOrthopedic:true,isShoulderHumerus:true}),
+  px("Revisione protesi di spalla","alta",true,"intermedio",{isMajorOrthopedic:true,isShoulderHumerus:true}),
+  px("Trattamento pseudoartrosi degli arti","alta",true,"intermedio",{isMajorOrthopedic:true}),
+  px("Revisione protesi di caviglia","alta",true,"intermedio",{isMajorOrthopedic:true}),
+  px("Artroprotesi primaria di gomito","alta",true,"intermedio",{isMajorOrthopedic:true}),
+  px("Revisione protesi di gomito","alta",true,"intermedio",{isMajorOrthopedic:true}),
+  px("Artrodesi tibio-tarsica +/- sottoastragalica","alta",true,"intermedio",{isMajorOrthopedic:true}),
+  px("Revisione protesi di anca","alta",true,"intermedio",{isMajorOrthopedic:true}),
+],
+"Urologia":[
+  px("Circoncisione","bassa",false,"basso"),px("Frenuloplastica","bassa",false,"basso"),
+  px("Exeresi cisti epididimo","bassa",false,"basso"),px("Eversione della vaginale","bassa",false,"basso"),
+  px("Stenting ureterale (posizionamento o estrazione)","bassa",false,"basso"),
+  px("Diatermocoagulazione condilomi genitali","bassa",false,"basso"),
+  px("Esplorativa scrotale","bassa",false,"basso"),px("Exeresi caruncola uretrale","bassa",false,"basso"),
+  px("Orchidopessi","bassa",false,"basso"),px("Legatura vena spermatica","bassa",false,"basso"),
+  px("Nefrostomia percutanea","bassa",false,"basso"),px("Biopsia vescicale","bassa",false,"basso"),
+  px("Ureteropieloscopia rigida","intermedia",false,"intermedio"),
+  px("Orchiectomia subcapsulare","intermedia",false,"intermedio"),
+  px("Linfoadenectomia iliaco-otturatoria","intermedia",true,"intermedio"),
+  px("Amputazione parziale del pene","intermedia",false,"intermedio"),
+  px("RIRS (Retrograde IntraRenal Surgery)","intermedia",false,"intermedio"),
+  px("TUIP","intermedia",false,"intermedio"),px("Orchifunilectomia","intermedia",false,"intermedio"),
+  px("Ureterolitotrissia","intermedia",false,"intermedio"),
+  px("TURP (resezione transuretrale prostata)","intermedia",true,"intermedio"),
+  px("Uretrotomia","intermedia",false,"intermedio"),
+  px("Exeresi cisti renale","intermedia",false,"intermedio"),
+  px("TURB (resezione transuretrale vescica)","intermedia",false,"intermedio"),
+  px("Sling uretrale TOT/TVT","intermedia",false,"intermedio"),
+  px("Adenomectomia prostatica transvescicale o retropubica","alta",true,"alto"),
+  px("Sfintere urinario artificiale","alta",false,"intermedio"),
+  px("Linfoadenectomia retroperitoneale","alta",true,"alto"),
+  px("Uretroplastica mucosa buccale","alta",false,"intermedio"),
+  px("Nefrolitotrissia percutanea","alta",true,"alto"),
+  px("Surrenalectomia","alta",true,"intermedio"),
+  px("Linfoadenectomia pelvica estesa","alta",true,"alto"),
+  px("Reimpianto ureterale","alta",true,"alto"),
+  px("Prostatectomia radicale","alta",true,"alto"),
+  px("Nefrectomia parziale","alta",true,"alto"),
+  px("Cistectomia radicale","alta",true,"alto"),
+  px("Sacrocolpopessi","alta",false,"intermedio"),
+  px("Nefrectomia radicale","alta",true,"alto"),
+  px("Pieloplastica","alta",true,"intermedio"),
+  px("Nefroureterectomia","alta",true,"alto"),
+  px("Espianto di rene trapiantato","alta",true,"alto"),
+],
+};
+
+/* ═══════════════════ LOGIC FUNCTIONS ═══════════════════ */
+
+// DEBUG ✓ — uses a.cv2 for cerebrovascolare (RCRI criterion)
+function computeRCRI(a){
+  let s=0;
+  if(a.ci)s++;   // cardiopatia ischemica
+  if(a.hf)s++;   // insufficienza cardiaca
+  if(a.cv2)s++;  // cerebrovascolare ← FIXED (was a.cv = altra comorbCV, errato)
+  if(a.ins)s++;  // insulina
+  if((Number(a.crcl)>0&&Number(a.crcl)<60)||a.dialisi)s++;
+  return s;
+}
+
+// DEBUG ✓ — verified against pag.26 griglia 3×3
+function computeExams(asa,proc,a){
+  const comp=proc.complexity,hbr=proc.highBleedingRisk,isMO=proc.isMajorOrthopedic||false;
+  const age=Number(a.age),crcl=Number(a.crcl);
+  const a65=age>65;
+  const G3=a.diabete||isMO;            // fn³ diabetici o ortopedica maggiore
+  // fn⁴=age>65; fn⁶=fumatori/comorbCV/renali/diabete — expanded C6 rule
+  // Count cardiovascular selections for expanded C6
+  const cvCount=[a.ci,a.imaV,a.old312,a.rec,a.angi,a.hf,a.scc,a.scc4,a.modFE,a.gravFE,a.valv,a.gravValv,a.fa,a.aritmia,a.arit4,a.pmk,a.icd,a.cv,a.iptC,a.iptS,a.cv2,a.tia].filter(Boolean).length;
+  const hasMeta=a.diabete||a.dmS||a.dialisi;
+  const hasPBM=a.anemia||a.bls;
+  const C6=a.fumatore||a.cv||a.cv2||(crcl>0&&crcl<60)||a.dialisi||a.diabete||cvCount>=2||(hasMeta&&cvCount>=1)||hasPBM;
+  const F46=a65||C6;
+  const resp34=asa>=3&&(a.bpco||a.bpcoMod||a.resp);
+  const osasI=a.osas==="mod_grave"||a.osas==="sospetta";
+  let ex={};
+  if(asa===1){
+    if(comp==="bassa"){ex.soloVisita=true;}
+    else if(comp==="intermedia"){
+      if(a65)ex.B=true; if(hbr){ex.C=true;ex.E=true;} if(G3)ex.G=true;
+      if(!a65&&!hbr&&!G3)ex.soloVisita=true;
+    }else{
+      ex.C=true; if(hbr)ex.E=true; if(G3)ex.G=true; if(a65||hbr)ex.ECG=true;
+    }
+  }else if(asa===2){
+    if(comp==="bassa"){
+      if(!a.nao&&!a.avk&&!G3)ex.soloVisita=true;
+      if(a.nao)ex.B=true; if(a.avk)ex.D=true; if(G3)ex.G=true;
+    }else if(comp==="intermedia"){
+      ex.B=true; if(hbr)ex.C=true; if(a.avk)ex.D=true; if(hbr)ex.E=true;
+      if(F46)ex.F=true; if(G3)ex.G=true; if(F46)ex.ECG=true;
+    }else{
+      ex.B=true;ex.C=true;ex.ECG=true;
+      if(a.avk)ex.D=true; if(hbr)ex.E=true; if(F46)ex.F=true; if(G3)ex.G=true;
+    }
+  }else{ // ASA 3-4
+    if(comp==="bassa"){
+      ex.ECG=true; if(a.nao)ex.B=true; if(a.avk)ex.D=true; if(G3)ex.G=true;
+    }else if(comp==="intermedia"){
+      ex.B=true;ex.ECG=true; if(C6)ex.C=true;
+      if(a.avk||a.epato)ex.D=true; // fn²⁻⁷: AVK o epatopatia cronica
+      if(hbr)ex.E=true; if(F46)ex.F=true; if(G3)ex.G=true;
+      if(resp34||osasI)ex.EGA=true;
+    }else{
+      ex.B=true;ex.C=true;ex.ECG=true;
+      if(a.avk||a.epato)ex.D=true; if(hbr)ex.E=true; if(F46)ex.F=true;
+      if(G3)ex.G=true; if(resp34||osasI)ex.EGA=true;
+    }
+  }
+  return ex;
+}
+
+// DEBUG ✓ — pag.27 PDTA: 10 criteri esatti. Criterion1: ASA>3 (=4), NOT >=3
+function computeRx(asa,proc,a,bmiVal){
+  const age=Number(a.age);
+  const bmi=bmiVal>0?bmiVal:Number(a.bmi);
+  const r=[];
+  // Criteri 1+2 (entrambi richiedono a.cp; criterio 1 ha condizioni aggiuntive)
+  if(a.cp){
+    if(proc.complexity==="alta"&&age>60&&asa>3) // asa>3 means ASA=4 exactly
+      r.push("Chirurgia di alta complessità + età > 60 aa + ASA > 3 + comorbidità cardiopolmonare cronica");
+    else
+      r.push("Patologia cardiopolmonare cronica candidata ad anestesia generale");
+  }
+  if(a.neo)     r.push("Neoplasia maligna attiva candidata ad anestesia generale");
+  if(a.radio)   r.push("Terapia radiante toracica negli ultimi 6 mesi");
+  if(a.immuno)  r.push("Immunodepressione");
+  if(a.indigenza) r.push("Stato di grave indigenza");
+  if(a.difficolta)r.push("Difficoltà di raccolta anamnestica");
+  if(bmi>40)    r.push(`BMI > 40 (valore: ${bmi.toFixed(1)} kg/m²)`);
+  if(proc.isThyroid)        r.push("Chirurgia della tiroide o presenza di gozzo");
+  if(proc.isShoulderHumerus)r.push("Chirurgia della spalla o dell'omero (possibilità di blocco interscalenico)");
+  return{indicated:r.length>0,reasons:r};
+}
+
+// DEBUG ✓ — flow-chart pag.54; BNP non indicato in FA
+function computeCardio(asa,proc,a,rcri,mets){
+  const cr=proc.cardiacRisk,fa=a.fa;
+  if(a.cca)return{indicated:true,urgency:"urgente",bnp:!fa,
+    reason:"Condizione cardiaca attiva o congenita nota",
+    detail:"Valutazione cardiologica URGENTE prima di qualsiasi pianificazione chirurgica."};
+  if(cr==="basso")return{indicated:false,
+    reason:"Rischio cardiologico chirurgico BASSO",
+    detail:"Nessuna consulenza cardiologica indicata di routine — il paziente può accedere direttamente in sala operatoria."};
+  if(a.scc||a.scc4)return{indicated:true,bnp:!fa,
+    reason:"Scompenso cardiaco cronico o acuto (SCC)",
+    detail:"Richiedere BNP + Troponina prima della consulenza per ottimizzazione preoperatoria."};
+  if(a.valv)return{indicated:true,bnp:!fa,
+    reason:"Valvulopatia moderata/severa",
+    detail:"Richiedere BNP + Troponina. Valutare ecocardiografia se non eseguita nell'ultimo anno o in caso di modifiche cliniche."};
+  if(rcri>=2)return{indicated:true,bnp:!fa,
+    reason:`Indice di Lee RCRI = ${rcri} punti (≥ 2) — chirurgia a rischio ${cr}`,
+    detail:"Richiedere BNP + Troponina prima della consulenza cardiologica."};
+  if((mets==="lt4"||mets==="unknown")&&rcri>=1)return{indicated:true,bnp:!fa,
+    reason:`METs ${mets==="unknown"?"non valutabili":"< 4"} con ≥ 1 fattore RCRI (score = ${rcri}) — rischio ${cr}`,
+    detail:"Richiedere BNP + Troponina prima della consulenza cardiologica."};
+  return{indicated:false,
+    reason:`Criteri non soddisfatti — METs ${mets==="gte4"?"≥ 4":"n.v."}, RCRI = ${rcri}, rischio ${cr}`,
+    detail:"Paziente avviabile in sala operatoria senza consulenza cardiologica."};
+}
+
+// DEBUG ✓ — receives bmiVal explicitly to handle BMI calculator
+function sugASA(a,bmiVal){
+  const bmi=bmiVal>0?bmiVal:Number(a.bmi);
+  const crcl=Number(a.crcl);
+  if(a.rec||a.angi||a.gravValv||a.gravFE||a.arit4||a.scc4||(crcl>0&&crcl<30&&!a.dialisi))return 4;
+  if(a.dmS||a.iptS||a.bpcoMod||bmi>40||a.epH||a.alcool||a.pmk||a.icd||a.modFE||a.dialisi||a.old312)return 3;
+  if(a.fumatore||a.diabete||bmi>30||a.iptC||a.bpco||a.imaV||a.grav)return 2;
+  return 1;
+}
+
+// BMI category helper
+function bmiCat(bmi){
+  if(!bmi||bmi<=0)return null;
+  if(bmi<18.5)return{l:"Sottopeso",c:"#3b82f6",bg:"#dbeafe"};
+  if(bmi<25)  return{l:"Normopeso",c:"#059669",bg:"#d1fae5"};
+  if(bmi<30)  return{l:"Sovrappeso",c:"#d97706",bg:"#fef3c7"};
+  if(bmi<35)  return{l:"Obesità Classe I",c:"#ea580c",bg:"#ffedd5"};
+  if(bmi<40)  return{l:"Obesità Classe II",c:"#dc2626",bg:"#fee2e2"};
+  return{l:"Obesità Classe III ⚠️",c:"#991b1b",bg:"#ffe4e6"};
+}
+
+/* ═══════════════════ STATE + INIT ═══════════════════ */
+const INIT={
+  age:"",sex:"",bmi:"",crcl:"",
+  nao:false,avk:false,antiagg:false,dapt:false,ins:false,glp1:false,glp1t:"",
+  diabete:false,dmS:false,fumatore:false,
+  ci:false,imaV:false,old312:false,rec:false,angi:false,
+  hf:false,scc:false,scc4:false,valv:false,gravValv:false,
+  aritmia:false,arit4:false,fa:false,pmk:false,icd:false,
+  cca:false,modFE:false,gravFE:false,cv:false,cv2:false,tia:false,
+  iptC:false,iptS:false,
+  dialisi:false,epato:false,epH:false,alcool:false,
+  bpco:false,bpcoMod:false,resp:false,cp:false,osas:"",
+  neo:false,immuno:false,radio:false,indigenza:false,difficolta:false,
+  anemia:false,bls:false,grav:false,
+};
+
+const EI={
+  B:{c:"#1a3460",bg:"#eff3ff",l:"Funzionalità Renale + Glicemia",d:"Azotemia, Creatininemia, Elettroliti, Glicemia"},
+  C:{c:"#1a3460",bg:"#eff3ff",l:"Emocromo Completo con Formula",d:"Hb, Ht, Leucociti con formula, PLT, MCV"},
+  D:{c:"#7c2d12",bg:"#fff7f3",l:"Coagulazione",d:"PT (INR), PTT, Fibrinogeno"},
+  E:{c:"#1e40af",bg:"#eff6ff",l:"Gruppo Sanguigno + Coombs",d:"Gruppo ABO+Rh, Test di Coombs Diretto e Indiretto (SIMT)"},
+  F:{c:"#b91c1c",bg:"#fff5f5",l:"Markers Cardiaci",d:"BNP (o NT-proBNP) + Troponina I/T ad alta sensibilità"},
+  G:{c:"#166534",bg:"#f0fdf4",l:"Glicemia + HbA1c",d:"Glicemia a digiuno, HbA1c (se non eseguita negli ultimi 3 mesi)"},
+};
+const ASA_C={1:"#16a34a",2:"#d97706",3:"#ea580c",4:"#b91c1c"};
+
+/* ═══════════════════ UI COMPONENTS ═══════════════════ */
+function CB({c,o,l,hl}){
+  return(
+    <label className={`cbl${hl&&c?" hl":""}`} onClick={()=>o(!c)}>
+      <input type="checkbox" checked={c} onChange={e=>o(e.target.checked)}
+        style={{marginTop:2,width:14,height:14,flexShrink:0,accentColor:"#0f2044"}}/>
+      <span className={`cbt${c?" on":""}${hl&&c?" hlon":""}`}>{l}</span>
+    </label>
+  );
+}
+
+function Sec({t,icon,ch,lc="#0f2044",bg="#f8fafc"}){
+  return(
+    <div className="card" style={{overflow:"hidden",marginBottom:14}}>
+      <div className="sh" style={{borderLeft:`4px solid ${lc}`,background:bg}}>
+        {icon&&<span style={{fontSize:17}}>{icon}</span>}
+        <span>{t}</span>
+      </div>
+      <div className="sg">{ch}</div>
+    </div>
+  );
+}
+
+function InfoBox({type,title,children}){
+  const cls={purple:"al-pu",amber:"al-am",red:"al-re",blue:"al-bl",green:"al-gr",orange:"al-or"}[type]||"al-bl";
+  const tc={purple:"#5b21b6",amber:"#92400e",red:"#991b1b",blue:"#1e3a5f",green:"#064e3b",orange:"#7c2d12"}[type]||"#1e3a5f";
+  return(
+    <div className={`alert ${cls}`}>
+      <div className="at" style={{color:tc}}>{title}</div>
+      <div style={{fontSize:13,color:tc,opacity:.85,lineHeight:1.55}}>{children}</div>
+    </div>
+  );
+}
+
+/* ═══════════════════ MAIN APP ═══════════════════ */
+function App(){
+  const[step,setStep]=useState(0);
+  const[pw,setPw]=useState(null);
+  const[spec,setSpec]=useState(Object.keys(PROCEDURES)[0]);
+  const[proc,setProc]=useState(null);
+  const[srch,setSrch]=useState("");
+  const[a,setA]=useState(INIT);
+  const[mets,setMets]=useState(null);
+  const[asaO,setAsaO]=useState(null);
+  const[egaP,setEgaP]=useState(null);
+  const[peso,setPeso]=useState("");
+  const[altezza,setAltezza]=useState("");
+
+  const upd=(k,v)=>setA(p=>({...p,[k]:v}));
+
+  // BMI auto-calc
+  const bmiCalc=useMemo(()=>{
+    const p=Number(peso),h=Number(altezza);
+    if(p>5&&h>50)return Math.round(p/((h/100)**2)*10)/10;
+    return null;
+  },[peso,altezza]);
+
+  const effBmi=bmiCalc!==null?bmiCalc:(Number(a.bmi)||0);
+  const bc=bmiCat(effBmi);
+
+  useEffect(()=>{
+    if(bmiCalc!==null)setA(p=>({...p,bmi:String(bmiCalc)}));
+  },[bmiCalc]);
+
+  const filt=useMemo(()=>{
+    const l=PROCEDURES[spec]||[];
+    return srch?l.filter(p=>p.name.toLowerCase().includes(srch.toLowerCase())):l;
+  },[spec,srch]);
+
+  const sASA=useMemo(()=>sugASA(a,effBmi),[a,effBmi]);
+  const fASA=asaO!==null?asaO:sASA;
+  const rcri=useMemo(()=>computeRCRI(a),[a]);
+
+  const res=useMemo(()=>{
+    if(!proc||!fASA||!mets)return null;
+    const ex=computeExams(fASA,proc,a);
+    const rx=computeRx(fASA,proc,a,effBmi);
+    const card=computeCardio(fASA,proc,a,rcri,mets);
+    if(card.indicated&&card.bnp&&!ex.F)ex.F=true;
+    const pbm=a.anemia||a.bls||(proc.highBleedingRisk&&proc.complexity!=="bassa");
+    return{ex,rx,card,pbm,
+      apa:fASA<=2&&proc.complexity==="bassa",
+      fr:Number(a.age)>=70};
+  },[proc,fASA,mets,a,rcri,effBmi]);
+
+  const rst=()=>{
+    setStep(0);setPw(null);setProc(null);setSrch("");setA(INIT);
+    setMets(null);setAsaO(null);setEgaP(null);
+    setSpec(Object.keys(PROCEDURES)[0]);setPeso("");setAltezza("");
+  };
+
+  // DEBUG ✓ — navigation guard: step2 requires age>0 AND effBmi>0
+  const ok=()=>
+    (step===1&&!!proc)||
+    (step===2&&Number(a.age)>0&&effBmi>0)||
+    (step===3&&!!mets)||
+    (step===4&&!!fASA);
+
+  const STEPS=["Percorso","Intervento","Anamnesi","METs","ASA","Risultati"];
+  const SN=Object.keys(PROCEDURES);
+
+  const CMP={bassa:{bg:"#d1fae5",c:"#065f46"},intermedia:{bg:"#fef3c7",c:"#92400e"},alta:{bg:"#fee2e2",c:"#991b1b"}};
+  const CRB={basso:{bg:"#d1fae5",c:"#065f46",bc:"#a7f3d0"},intermedio:{bg:"#fef3c7",c:"#92400e",bc:"#fde68a"},alto:{bg:"#fee2e2",c:"#991b1b",bc:"#fecaca"}};
+
+  /* ── SIMPLIFIED PATHWAYS ── */
+  if(pw&&pw!=="standard"){
+    const iS=pw==="rass";
+    const items=iS?[
+      "Il paziente riceverà una sedazione (RASS 0/−4) che gli consentirà di tollerare la procedura invasiva mantenendo un'adeguata funzione cardio-polmonare.",
+      "Nessun esame preoperatorio necessario di routine, salvo diversa indicazione del chirurgo per situazioni cliniche a rischio particolare.",
+      "La visita anestesiologica con firma del consenso informato si effettua il giorno stesso dell'intervento, direttamente presso l'anestesista dedicato alla procedura.",
+      "L'esecuzione standard di esami comporta un gratuito ritardo nella programmazione senza incremento della sicurezza.",
+      "L'anestesista ha facoltà di richiedere esami in urgenza qualora lo ritenga necessario."
+    ]:[
+      "Procedura di bassa complessità in anestesia locale o topica (es. cataratta, escissioni semplici cute, piccoli interventi in AL).",
+      "Nessun esame preoperatorio di routine — il paziente accede in unico accesso senza esami preventivi.",
+      "Il chirurgo può richiedere esami specifici in base ai percorsi disciplinari o per situazioni cliniche ritenute a rischio particolare.",
+      "La visita anestesiologica preoperatoria non è necessaria in questi casi.",
+      "L'anestesista ha comunque facoltà di richiedere esami in urgenza qualora lo ritenga necessario."
+    ];
+    return(
+      <div style={{minHeight:"100vh",background:"var(--bg)"}}>
+        <div style={{background:iS?"linear-gradient(135deg,#1e3a8a,#4338ca)":"linear-gradient(135deg,#065f46,#0d9488)",color:"white",padding:"18px 24px"}}>
+          <div style={{fontSize:11,opacity:.65,textTransform:"uppercase",letterSpacing:1.2,marginBottom:5}}>PDTA Preospedalizzazione</div>
+          <div style={{fontSize:20,fontWeight:700}}>{iS?"Percorso Analgo-Sedazione (RASS 0/−4)":"Percorso Chirurgia in AL / Topica"}</div>
+        </div>
+        <div style={{maxWidth:700,margin:"0 auto",padding:20}}>
+          <div className="card" style={{padding:24,marginBottom:16}}>
+            <div style={{display:"inline-flex",alignItems:"center",gap:8,background:iS?"#dbeafe":"#d1fae5",color:iS?"#1e40af":"#065f46",padding:"7px 16px",borderRadius:24,fontSize:13,fontWeight:700,marginBottom:18}}>
+              ✓ Nessun esame preoperatorio richiesto di routine
+            </div>
+            {items.map((t,i)=>(
+              <div key={i} style={{display:"flex",gap:14,padding:"11px 14px",background:"#f8fafc",borderRadius:10,marginBottom:8,border:"1px solid var(--border)"}}>
+                <span style={{width:26,height:26,borderRadius:"50%",background:iS?"#1e40af":"#065f46",color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0}}>{i+1}</span>
+                <p style={{color:"var(--text)",fontSize:14,margin:0,lineHeight:1.55}}>{t}</p>
+              </div>
+            ))}
+            <div style={{marginTop:16,padding:"11px 15px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:10,fontSize:13,color:"#92400e"}}>
+              <strong>⚠️ Nota:</strong> Questo strumento è di supporto decisionale e non sostituisce il giudizio clinico del medico anestesista.
+            </div>
+            <div className="card" style={{padding:20,marginTop:16,borderLeft:"4px solid #6b7280",background:"#f9fafb"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+                <span style={{width:36,height:36,borderRadius:"50%",background:"#374151",color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>⚖</span>
+                <span style={{fontWeight:700,fontSize:16,color:"#1f2937",textTransform:"uppercase",letterSpacing:.5}}>Disclaimer Medico-Legale</span>
+              </div>
+              <div style={{fontSize:13,color:"#374151",lineHeight:1.75}}>
+                <p style={{marginBottom:10}}>Questo strumento digitale è concepito esclusivamente come supporto al processo decisionale clinico nell'ambito della preospedalizzazione, in conformità al PDTA aziendale di Preospedalizzazione.</p>
+                <p style={{marginBottom:10}}>Le indicazioni fornite dal tool sono di natura orientativa e non vincolante. La responsabilità della valutazione clinica, della prescrizione degli esami e della gestione del paziente resta in capo al medico curante (chirurgo, anestesista o altro specialista coinvolto nel percorso), che è tenuto ad esercitare il proprio giudizio clinico indipendente, tenendo conto delle specifiche condizioni del singolo paziente.</p>
+                <p style={{marginBottom:10}}>Il presente strumento non sostituisce in alcun modo la visita medica, l'anamnesi, l'esame obiettivo né il rapporto medico-paziente. L'utilizzo del tool non esonera il professionista sanitario dalla responsabilità professionale prevista dalla normativa vigente (L. 24/2017 — Legge Gelli-Bianco).</p>
+                <p style={{margin:0}}>I dati inseriti nel tool non vengono registrati, trasmessi o conservati in alcun sistema esterno.</p>
+              </div>
+            </div>
+          </div>
+          <div className="np" style={{display:"flex",gap:10}}>
+            <button className="btn btn-s" onClick={rst} style={{flex:1}}>← Nuova Valutazione</button>
+            <button className="btn btn-p" onClick={()=>window.print()} style={{flex:1}}>🖨 Stampa / Esporta PDF</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── MAIN WIZARD ── */
+  return(
+    <div style={{minHeight:"100vh",background:"var(--bg)"}}>
+
+      {/* HEADER */}
+      <div className="np" style={{background:"linear-gradient(135deg,#0f2044 0%,#1a3460 60%,#0f5460 100%)",padding:"14px 22px",display:"flex",alignItems:"center",justifyContent:"space-between",boxShadow:"0 3px 14px rgba(0,0,0,.2)"}}>
+        <div>
+          <div style={{fontSize:10,opacity:.55,letterSpacing:1.2,textTransform:"uppercase",color:"white",marginBottom:3}}>PDTA Preospedalizzazione · Direzione Sanitaria</div>
+          <div style={{fontSize:16,fontWeight:700,color:"white",letterSpacing:.2}}>PDTA Preospedalizzazione · Supporto Decisionale Esami</div>
+          <div style={{fontSize:10,opacity:.45,color:"white",marginTop:2}}>Sviluppata da Dario Anselmi</div>
+        </div>
+        <button onClick={rst} style={{background:"rgba(255,255,255,.12)",color:"rgba(255,255,255,.85)",border:"1px solid rgba(255,255,255,.2)",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:500}}>↺ Reset</button>
+      </div>
+
+      {/* STEP BAR */}
+      {pw==="standard"&&(
+        <div className="np" style={{background:"white",borderBottom:"1px solid var(--border)",padding:"10px 22px",display:"flex",gap:4,overflowX:"auto",boxShadow:"0 1px 0 var(--border)"}}>
+          {STEPS.map((l,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+              <button onClick={()=>i<step&&setStep(i)}
+                style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:20,border:"none",fontSize:12,fontWeight:600,
+                  cursor:i<step?"pointer":"default",
+                  background:i===step?"var(--primary)":i<step?"var(--teal)":"#f1f5f9",
+                  color:i<=step?"white":"var(--text3)",
+                  boxShadow:i===step?"0 2px 8px rgba(15,32,68,.3)":"none"}}>
+                <span style={{width:19,height:19,borderRadius:"50%",background:"rgba(255,255,255,.22)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10}}>
+                  {i<step?"✓":i+1}
+                </span>
+                <span className="np">{l}</span>
+              </button>
+              {i<STEPS.length-1&&<span style={{color:"#cbd5e1",fontSize:13}}>›</span>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{maxWidth:920,margin:"0 auto",padding:"18px 16px"}}>
+
+      {/* ═══════ STEP 0: PERCORSO ═══════ */}
+      {step===0&&(
+        <div>
+          <div style={{textAlign:"center",paddingTop:20,marginBottom:32}}>
+            <h1 style={{fontSize:26,fontWeight:700,color:"var(--primary)",marginBottom:10,lineHeight:1.25}}>Seleziona il Percorso in Base alla Complessità</h1>
+            <p style={{color:"var(--text2)",fontSize:15,maxWidth:540,margin:"0 auto"}}>Identificare il tipo di procedura per determinare il percorso preoperatorio appropriato</p>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3, 1fr)",gap:16,marginBottom:16}}>
+            {[
+              {id:"al_topica",t:"Chirurgia a bassa complessità in Anestesia Locale o Topica",s:"Nessun esame preoperatorio di routine",e:"Cataratta · Escissioni cute · Piccoli interventi in AL",bg:"linear-gradient(145deg,#059669,#0d9488)",sh:"0 8px 28px rgba(5,150,105,.35)"},
+              {id:"rass",t:"Procedure invasive con mantenimento della funzione cardio-polmonare",s:"Analgo-sedazione RASS 0/−4 · Nessun esame preoperatorio di routine",e:"Endoscopie digestive · DISE · Sleep Endoscopy",bg:"linear-gradient(145deg,#2563eb,#4338ca)",sh:"0 8px 28px rgba(37,99,235,.35)"},
+              {id:"standard",t:"Chirurgia Elettiva Standard",s:"Percorso completo di preospedalizzazione con esami e visita anestesiologica",e:"Tutti gli interventi in AG, ALR o sedazione profonda",bg:"linear-gradient(145deg,#0f2044,#1a3460)",sh:"0 8px 28px rgba(15,32,68,.35)"},
+            ].map(opt=>(
+              <button key={opt.id} onClick={()=>{setPw(opt.id);if(opt.id==="standard")setStep(1);}}
+                style={{textAlign:"left",borderRadius:18,padding:22,color:"white",background:opt.bg,border:"none",cursor:"pointer",boxShadow:opt.sh,transition:"transform .18s,box-shadow .18s"}}
+                onMouseOver={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow=opt.sh.replace("0.35","0.5");}}
+                onMouseOut={e=>{e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow=opt.sh;}}>
+                <div style={{fontSize:19,fontWeight:700,marginBottom:7,lineHeight:1.25}}>{opt.t}</div>
+                <div style={{fontSize:15,opacity:.82,marginBottom:14,lineHeight:1.5}}>{opt.s}</div>
+                <div style={{fontSize:14,opacity:.5,borderTop:"1px solid rgba(255,255,255,.2)",paddingTop:12}}>{opt.e}</div>
+              </button>
+            ))}
+          </div>
+          <button onClick={()=>{alert("Sezione in fase di sviluppo — disponibile a breve");}}
+            style={{width:"100%",textAlign:"left",borderRadius:18,padding:22,color:"white",background:"linear-gradient(145deg,#4338ca,#6366f1)",border:"2px dashed rgba(255,255,255,.4)",cursor:"pointer",boxShadow:"0 8px 28px rgba(99,102,241,.35)",transition:"transform .18s,box-shadow .18s",opacity:.9}}
+            onMouseOver={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.opacity="1";}}
+            onMouseOut={e=>{e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.opacity=".9";}}>
+            <div style={{display:"flex",alignItems:"center",gap:16}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:19,fontWeight:700,marginBottom:5,lineHeight:1.25}}>Visita Anestesiologica</div>
+                <div style={{fontSize:15,opacity:.82,marginBottom:6,lineHeight:1.5}}>Indicazioni specifiche per condizione clinica del paziente</div>
+                <div style={{fontSize:14,opacity:.5}}>Diabete · Ipertensione · Aritmie · TAO · OSAS · Fragilità</div>
+              </div>
+              <div style={{padding:"5px 14px",borderRadius:20,background:"rgba(255,255,255,.2)",fontSize:12,fontWeight:600,flexShrink:0}}>In sviluppo</div>
+            </div>
+          </button>
+        </div>
+      )}
+
+      {/* ═══════ STEP 1: INTERVENTO ═══════ */}
+      {step===1&&(
+        <div>
+          <h2 style={{fontSize:20,fontWeight:700,color:"var(--primary)",marginBottom:16}}>Specialità e Intervento Previsto</h2>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>
+            {SN.map(sp=>(
+              <button key={sp} onClick={()=>{setSpec(sp);setSrch("");setProc(null);}}
+                style={{padding:"7px 15px",borderRadius:20,border:"1.5px solid",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .15s",
+                  background:spec===sp?"var(--primary)":"white",
+                  color:spec===sp?"white":"var(--text2)",
+                  borderColor:spec===sp?"var(--primary)":"var(--border)"}}>
+                {sp}
+              </button>
+            ))}
+          </div>
+          <div style={{position:"relative",marginBottom:12}}>
+            <input value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Cerca intervento per nome…"
+              className="inp" style={{paddingLeft:38,paddingRight:36}}/>
+            <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",opacity:.4,fontSize:16}}>🔍</span>
+            {srch&&<button onClick={()=>setSrch("")} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"var(--text3)",fontSize:16}}>✕</button>}
+          </div>
+          <div className="card" style={{overflow:"hidden"}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 115px 110px",padding:"10px 16px",background:"#f8fafc",borderBottom:"1px solid var(--border)",fontSize:11,fontWeight:700,color:"var(--text2)",textTransform:"uppercase",letterSpacing:.6}}>
+              <span>Intervento</span><span style={{textAlign:"center"}}>Complessità</span><span style={{textAlign:"center"}}>Rischio CV</span>
+            </div>
+            <div style={{maxHeight:400,overflowY:"auto"}}>
+              {filt.map((p,i)=>{
+                const sel=proc?.name===p.name;
+                const cb=CMP[p.complexity],rb=CRB[p.cardiacRisk];
+                return(
+                  <button key={i} onClick={()=>setProc(p)}
+                    style={{width:"100%",textAlign:"left",display:"grid",gridTemplateColumns:"1fr 115px 110px",alignItems:"center",
+                      padding:"10px 16px",border:"none",borderBottom:"1px solid #f8fafc",cursor:"pointer",
+                      background:sel?"#eff6ff":"white",
+                      borderLeft:sel?"4px solid var(--primary)":"4px solid transparent",
+                      transition:"background .1s"}}>
+                    <span style={{fontSize:13,color:"var(--text)",paddingRight:8,lineHeight:1.4}}>{p.name}</span>
+                    <span style={{textAlign:"center"}}><span style={{padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,background:cb.bg,color:cb.c}}>{p.complexity.charAt(0).toUpperCase()+p.complexity.slice(1)}</span></span>
+                    <span style={{textAlign:"center"}}><span style={{padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,border:`1px solid ${rb.bc}`,background:rb.bg,color:rb.c}}>{p.cardiacRisk}</span></span>
+                  </button>
+                );
+              })}
+              {filt.length===0&&<div style={{padding:32,textAlign:"center",color:"var(--text3)",fontSize:14}}>Nessun intervento trovato</div>}
+            </div>
+          </div>
+          {proc&&(
+            <div style={{marginTop:12,background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:12,padding:14,display:"flex",flexWrap:"wrap",gap:8,alignItems:"center"}}>
+              <span style={{fontWeight:700,color:"#1e40af",fontSize:14}}>✓ {proc.name}</span>
+              {proc.highBleedingRisk&&<span className="badge b-r">⚠ Alto rischio emorragico</span>}
+              {proc.isMajorOrthopedic&&<span className="badge b-b">Ortopedica maggiore</span>}
+              {proc.isThyroid&&<span className="badge b-p">Tiroide / gozzo</span>}
+              {proc.isShoulderHumerus&&<span className="badge" style={{background:"#e0e7ff",color:"#3730a3"}}>Spalla / Omero</span>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ═══════ STEP 2: ANAMNESI ═══════ */}
+      {step===2&&(
+        <div>
+          <h2 style={{fontSize:20,fontWeight:700,color:"var(--primary)",marginBottom:5}}>Dati Paziente ed Anamnesi</h2>
+          <p style={{color:"var(--text2)",fontSize:14,marginBottom:18}}>I campi non compilati sono considerati negativi.</p>
+
+          {/* DEMOGRAPHICS + BMI CALCULATOR */}
+          <div className="card" style={{overflow:"hidden",marginBottom:14}}>
+            <div className="sh" style={{borderLeft:"4px solid var(--primary)",background:"var(--primary)",color:"white"}}>
+              <span style={{fontSize:17}}>👤</span><span>Dati Demografici</span>
+            </div>
+            <div style={{padding:16}}>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(100px,1fr))",gap:12,marginBottom:16}}>
+                <div>
+                  <label className="ilb">Età (anni)</label>
+                  <input type="number" value={a.age} onChange={e=>upd("age",e.target.value)} placeholder="—" className="inp"/>
+                </div>
+                <div>
+                  <label className="ilb">CrCl (ml/min)</label>
+                  <input type="number" value={a.crcl} onChange={e=>upd("crcl",e.target.value)} placeholder="—" className="inp"/>
+                </div>
+                <div>
+                  <label className="ilb">Sesso</label>
+                  <select value={a.sex} onChange={e=>upd("sex",e.target.value)} className="inp">
+                    <option value="">--</option><option value="M">Maschio</option><option value="F">Femmina</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* BMI CALCULATOR */}
+              <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:12,padding:14}}>
+                <div style={{fontSize:12,fontWeight:700,color:"#0369a1",textTransform:"uppercase",letterSpacing:.5,marginBottom:12,display:"flex",alignItems:"center",gap:6}}>
+                  <span>🧮</span> Calcolatore BMI
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+                  <div>
+                    <label className="ilb">Peso (kg)</label>
+                    <input type="number" value={peso} onChange={e=>setPeso(e.target.value)} placeholder="es. 80" className="inp"/>
+                  </div>
+                  <div>
+                    <label className="ilb">Altezza (cm)</label>
+                    <input type="number" value={altezza} onChange={e=>setAltezza(e.target.value)} placeholder="es. 170" className="inp"/>
+                  </div>
+                  <div>
+                    <label className="ilb">BMI (kg/m²)</label>
+                    <input type="number"
+                      value={bmiCalc!==null?bmiCalc:a.bmi}
+                      onChange={e=>{if(bmiCalc===null)upd("bmi",e.target.value);}}
+                      placeholder="oppure inserisci"
+                      className="inp"
+                      style={{background:bmiCalc!==null?"#e0f2fe":"white",color:bmiCalc!==null?"#0369a1":"var(--text)",fontWeight:bmiCalc!==null?600:400}}
+                    />
+                  </div>
+                </div>
+                {bc&&(
+                  <div style={{marginTop:10,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                    <span style={{padding:"4px 13px",borderRadius:20,fontSize:13,fontWeight:700,background:bc.bg,color:bc.c}}>
+                      BMI {effBmi.toFixed(1)} — {bc.l}
+                    </span>
+                    {effBmi>40&&<span className="badge b-r">⚠ BMI > 40 → RX torace indicata</span>}
+                    {effBmi>30&&effBmi<=40&&<span className="badge b-a">Contribuisce ad ASA ≥ 2/3</span>}
+                  </div>
+                )}
+                {!bc&&<p style={{fontSize:12,color:"#0369a1",marginTop:8,opacity:.7}}>Inserire peso e altezza per il calcolo automatico, oppure digitare il BMI direttamente nel campo a destra.</p>}
+              </div>
+            </div>
+          </div>
+
+          <Sec t="Terapia Farmacologica" icon="💊" lc="#d97706" bg="#fffbeb" ch={<>
+            <CB c={a.nao} o={v=>upd("nao",v)} l="NAO (rivaroxaban, apixaban, dabigatran, edoxaban)"/>
+            <CB c={a.avk} o={v=>upd("avk",v)} l="AVK — warfarin/Coumadin, acenocumarolo/Sintrom"/>
+            <CB c={a.antiagg} o={v=>upd("antiagg",v)} l="Antiaggregante singolo (ASA, clopidogrel, ecc.)"/>
+            <CB c={a.dapt} o={v=>upd("dapt",v)} l="Doppia antiaggregazione piastrinica (DAPT)"/>
+            <CB c={a.ins} o={v=>upd("ins",v)} l="Insulina (terapia insulinica) — conta per RCRI"/>
+            <CB c={a.diabete} o={v=>upd("diabete",v)} l="Diabete mellito — indica G (Glicemia + HbA1c)"/>
+            <div style={{gridColumn:"1/-1"}}>
+              <CB c={a.glp1} o={v=>upd("glp1",v)} l="Agonista GLP-1 (semaglutide, liraglutide, tirzepatide…)"/>
+              {a.glp1&&(
+                <div style={{marginTop:8,marginLeft:22,background:"#fffbeb",border:"1px solid #fcd34d",borderRadius:10,padding:12}}>
+                  <p style={{fontSize:12,fontWeight:700,color:"#92400e",marginBottom:8}}>⚠️ Specificare tipo per la corretta tempistica di sospensione:</p>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:7}}>
+                    {[["orale","Orale","Sospendere 24h prima"],["par_diabete","Parenterale · DM","Sospendere 1 settimana prima"],["par_obesita","Parenterale · Obesità","Sospendere 2 settimane prima"]].map(([v,l,note])=>(
+                      <label key={v} style={{cursor:"pointer",padding:"9px 10px",borderRadius:9,border:`2px solid ${a.glp1t===v?"#f59e0b":"var(--border)"}`,background:a.glp1t===v?"#fef3c7":"white",fontSize:12}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+                          <input type="radio" name="glp1t" value={v} checked={a.glp1t===v} onChange={()=>upd("glp1t",v)}/>
+                          <strong style={{color:"var(--text)"}}>{l}</strong>
+                        </div>
+                        <span style={{color:"#b45309",marginLeft:18,fontSize:11}}>{note}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p style={{fontSize:12,color:"#b45309",marginTop:8}}>⚕️ Tutti i pazienti in GLP-1 → considerare a stomaco pieno: dieta semiliquida + eco gastrica preop o RSI.</p>
+                </div>
+              )}
+            </div>
+          </>}/>
+
+          <Sec t="Cardiovascolare" icon="🫀" lc="#dc2626" bg="#fff8f8" ch={<>
+            <CB c={a.cca} o={v=>upd("cca",v)} l="⚠️ Condizione cardiaca attiva o congenita nota" hl/>
+            <CB c={a.ci} o={v=>upd("ci",v)} l="Cardiopatia ischemica (IMA preg., angina stabile, CAD) — RCRI"/>
+            <CB c={a.imaV} o={v=>upd("imaV",v)} l="IMA/CABG/angioplastica/stent precedenti (> 12 mesi)"/>
+            <CB c={a.old312} o={v=>upd("old312",v)} l="IMA/TIA/ictus/stent/CAD da 3 a 12 mesi fa → ASA 3"/>
+            <CB c={a.rec} o={v=>upd("rec",v)} l="IMA/TIA/ictus/stent/CAD < 3 mesi → ASA 4" hl/>
+            <CB c={a.angi} o={v=>upd("angi",v)} l="Angina instabile (CCS III–IV) → ASA 4" hl/>
+            <CB c={a.hf} o={v=>upd("hf",v)} l="Insufficienza cardiaca compensata o pregressa — RCRI"/>
+            <CB c={a.scc} o={v=>upd("scc",v)} l="Scompenso cardiaco cronico (SCC)"/>
+            <CB c={a.scc4} o={v=>upd("scc4",v)} l="Scompenso cardiaco acuto / decompensato → ASA 4" hl/>
+            <CB c={a.modFE} o={v=>upd("modFE",v)} l="Riduzione moderata della FE (EF < 40%) → ASA 3"/>
+            <CB c={a.gravFE} o={v=>upd("gravFE",v)} l="Grave disfunzione sistolica / riduzione severa FE → ASA 4" hl/>
+            <CB c={a.valv} o={v=>upd("valv",v)} l="Valvulopatia moderata / severa"/>
+            <CB c={a.gravValv} o={v=>upd("gravValv",v)} l="Valvulopatia grave sintomatica → ASA 4" hl/>
+            <CB c={a.fa} o={v=>upd("fa",v)} l="Fibrillazione Atriale (FA) — BNP NON indicato in FA"/>
+            <CB c={a.aritmia} o={v=>upd("aritmia",v)} l="Aritmia cronica stabile"/>
+            <CB c={a.arit4} o={v=>upd("arit4",v)} l="Aritmie refrattarie al trattamento → ASA 4" hl/>
+            <CB c={a.pmk} o={v=>upd("pmk",v)} l="Portatore di PMK (Pace-Maker)"/>
+            <CB c={a.icd} o={v=>upd("icd",v)} l="Portatore di ICD (defibrillatore impiantabile)"/>
+            <CB c={a.cv} o={v=>upd("cv",v)} l="Altra comorbidità CV (vasculopatia periferica, PAD…)"/>
+            <CB c={a.iptC} o={v=>upd("iptC",v)} l="Ipertensione arteriosa ben controllata → ASA 2"/>
+            <CB c={a.iptS} o={v=>upd("iptS",v)} l="Ipertensione arteriosa scarsamente controllata → ASA 3"/>
+          </>}/>
+
+          <Sec t="Cerebrovascolare" icon="🧠" lc="#7c3aed" bg="#faf5ff" ch={<>
+            <CB c={a.cv2} o={v=>upd("cv2",v)} l="Insufficienza cerebrovascolare (stroke/TIA pregresso) — RCRI"/>
+            <CB c={a.tia} o={v=>upd("tia",v)} l="TIA/Ictus nei 6 mesi precedenti → consulto neurologico indicato"/>
+          </>}/>
+
+          <Sec t="Respiratorio e OSAS" icon="🫁" lc="#2563eb" bg="#f0f6ff" ch={<>
+            <CB c={a.bpco} o={v=>upd("bpco",v)} l="BPCO lieve → ASA 2"/>
+            <CB c={a.bpcoMod} o={v=>upd("bpcoMod",v)} l="BPCO moderata/severa → ASA 3"/>
+            <CB c={a.resp} o={v=>upd("resp",v)} l="Altra patologia respiratoria cronica con limitazione funzionale"/>
+            <CB c={a.cp} o={v=>upd("cp",v)} l="Comorbidità cardiopolmonare cronica (per RX torace)"/>
+            <div style={{gridColumn:"1/-1",padding:"4px 8px"}}>
+              <div style={{fontSize:12,fontWeight:700,color:"var(--text2)",textTransform:"uppercase",letterSpacing:.5,marginBottom:8}}>OSAS — Sindrome da Apnee Ostruttive del Sonno</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+                {[["","Assente"],["sospetta","Sospetta (STOP-Bang ≥ 4)"],["lieve","Diagnosticata Lieve (AHI 5–14)"],["mod_grave","Diagnosticata Mod/Grave (AHI ≥ 15)"]].map(([v,l])=>(
+                  <label key={v} style={{cursor:"pointer",padding:"9px 11px",borderRadius:9,border:`2px solid ${a.osas===v?"#3b82f6":"var(--border)"}`,background:a.osas===v?"#eff6ff":"white",fontSize:13,display:"flex",alignItems:"center",gap:8}}>
+                    <input type="radio" name="osas" value={v} checked={a.osas===v} onChange={()=>upd("osas",v)} style={{flexShrink:0}}/>
+                    <span style={{color:"var(--text)"}}>{l}</span>
+                  </label>
+                ))}
+              </div>
+              {a.osas==="mod_grave"&&<div style={{marginTop:8,padding:"9px 12px",background:"#dbeafe",borderRadius:9,fontSize:13,color:"#1e40af"}}>⚕️ OSAS Mod/Grave: portare CPAP al ricovero · valutare EGA preoperatoria · score rischio post-op aumentato.</div>}
+            </div>
+          </>}/>
+
+          <Sec t="Metabolica, Renale e Altro" icon="🩺" lc="#7c3aed" bg="#faf5ff" ch={<>
+            <CB c={a.dmS} o={v=>upd("dmS",v)} l="DM scarsamente controllato (HbA1c > 8%) → ASA 3"/>
+            <CB c={a.dialisi} o={v=>upd("dialisi",v)} l="IRC in dialisi regolare → ASA 3"/>
+            <CB c={a.epato} o={v=>upd("epato",v)} l="Epatopatia cronica — indica coagulazione"/>
+            <CB c={a.epH} o={v=>upd("epH",v)} l="Epatite attiva → ASA 3"/>
+            <CB c={a.alcool} o={v=>upd("alcool",v)} l="Abuso di alcool → ASA 3"/>
+            <div style={{gridColumn:"1/-1",padding:"2px 0"}}>
+              <label onClick={()=>upd("fumatore",!a.fumatore)} style={{cursor:"pointer",display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:10,border:`2px solid ${a.fumatore?"#dc2626":"#f97316"}`,background:a.fumatore?"#fef2f2":"#fff7ed",transition:"all .15s"}}>
+                <span style={{width:18,height:18,borderRadius:5,border:`2px solid ${a.fumatore?"#dc2626":"#d97706"}`,background:a.fumatore?"#dc2626":"white",display:"flex",alignItems:"center",justifyContent:"center",color:"white",fontSize:11,fontWeight:700,flexShrink:0}}>{a.fumatore?"✓":""}</span>
+                <span style={{fontSize:14,fontWeight:700,color:a.fumatore?"#dc2626":"#c2410c"}}>FUMATORE ATTIVO → ASA 2</span>
+              </label>
+            </div>
+            <CB c={a.grav} o={v=>upd("grav",v)} l="Gravidanza in atto o sospettata → ASA 2"/>
+          </>}/>
+
+          <Sec t="RX Torace e PBM" icon="📋" lc="var(--slate)" bg="#f8fafc" ch={<>
+            <CB c={a.cp} o={v=>upd("cp",v)} l="Comorbidità cardiopolmonare cronica (già selezionabile sopra)"/>
+            <CB c={a.neo} o={v=>upd("neo",v)} l="Neoplasia maligna attiva (indica RX torace se AG)"/>
+            <CB c={a.radio} o={v=>upd("radio",v)} l="Radioterapia toracica negli ultimi 6 mesi"/>
+            <CB c={a.immuno} o={v=>upd("immuno",v)} l="Immunodepressione (farmacologica o patologica)"/>
+            <CB c={a.indigenza} o={v=>upd("indigenza",v)} l="Stato di grave indigenza"/>
+            <CB c={a.difficolta} o={v=>upd("difficolta",v)} l="Difficoltà di raccolta anamnestica"/>
+            <CB c={a.anemia} o={v=>upd("anemia",v)} l="Anemia nota o sospetta (Hb < 12 F / < 13 M) → avviare PBM"/>
+            <CB c={a.bls} o={v=>upd("bls",v)} l="Tabella Bleeding Score positiva (diatesi emorragica/trombotica)"/>
+          </>}/>
+        </div>
+      )}
+
+      {/* ═══════ STEP 3: METs ═══════ */}
+      {step===3&&(
+        <div>
+          <h2 style={{fontSize:20,fontWeight:700,color:"var(--primary)",marginBottom:5}}>Capacità Funzionale — Scala METs</h2>
+          <p style={{color:"var(--text2)",fontSize:14,marginBottom:22}}>La capacità funzionale è determinante per la decisione sulla consulenza cardiologica preoperatoria</p>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:14,marginBottom:24}}>
+            {[
+              {v:"lt4",icon:"🐢",l:"METs < 4",d:"Non riesce a salire almeno un piano di scale, camminare speditamente su piano o svolgere lavori domestici leggeri come lavare i piatti o spolverare",bs:{bg:"#fee2e2",c:"#991b1b"}},
+              {v:"gte4",icon:"🚶",l:"METs ≥ 4",d:"Riesce a salire almeno un piano di scale, camminare speditamente (6 km/h), fare giardinaggio o andare in bicicletta su piano — capacità funzionale sufficiente",bs:{bg:"#d1fae5",c:"#065f46"}},
+              {v:"unknown",icon:"❓",l:"METs non valutabili",d:"Paziente non collaborante, disabilità motorie preesistenti o impossibile determinare la capacità funzionale in modo affidabile",bs:{bg:"#f1f5f9",c:"#475569"}},
+            ].map(opt=>(
+              <button key={opt.v} onClick={()=>setMets(opt.v)}
+                style={{textAlign:"left",borderRadius:16,padding:18,border:`2px solid ${mets===opt.v?"var(--primary)":"var(--border)"}`,
+                  background:mets===opt.v?"#eff6ff":"white",cursor:"pointer",
+                  boxShadow:mets===opt.v?"0 4px 14px rgba(15,32,68,.18)":"var(--sh)",transition:"all .18s"}}>
+                <div style={{fontSize:30,marginBottom:10}}>{opt.icon}</div>
+                <div style={{display:"inline-block",padding:"3px 11px",borderRadius:20,fontSize:12,fontWeight:700,background:opt.bs.bg,color:opt.bs.c,marginBottom:10}}>{opt.l}</div>
+                <p style={{color:"var(--text2)",fontSize:13,lineHeight:1.55,margin:0}}>{opt.d}</p>
+              </button>
+            ))}
+          </div>
+          <div className="card" style={{overflow:"hidden"}}>
+            <div style={{padding:"10px 16px",background:"#f8fafc",borderBottom:"1px solid var(--border)",fontSize:11,fontWeight:700,color:"var(--text2)",textTransform:"uppercase",letterSpacing:.6}}>
+              📊 Scala METs — Riferimento Rapido (PDTA)
+            </div>
+            <div style={{maxHeight:215,overflowY:"auto"}}>
+              {[[1,"Cura personale: mangiare, vestirsi, lavarsi"],[2,"Camminare in casa"],[3,"Camminare in piano 100 m a 3–4 km/h"],["≥ 4★","Attività casalinga leggera (lavare piatti, spolverare) — SOGLIA CLINICA"],[5,"Lavorare in giardino, salire una rampa di scale"],[6,"Camminare speditamente a 6 km/h, bicicletta piano"],[7,"Breve corsa, lavare l'automobile"],[8,"Attività casalinga pesante, salire 3 rampe di scale"],[9,"Lavori all'aperto (scavare), portare 30 kg"],[10,"Attività ricreativa moderata (golf, ballo, bicicletta, montagna)"],[">10","Sport impegnativi: nuoto, tennis singolo, basket, calcio, sci"]].map(([m,d],i)=>(
+                <div key={i} style={{display:"flex",gap:12,padding:"8px 16px",borderBottom:"1px solid #f8fafc",background:String(m).includes("★")?"#fffbeb":"white",alignItems:"center"}}>
+                  <span style={{flexShrink:0,minWidth:38,textAlign:"center",padding:"2px 6px",borderRadius:6,fontSize:12,fontWeight:700,background:String(m).includes("★")?"#fde68a":"#f1f5f9",color:String(m).includes("★")?"#92400e":"var(--text2)"}}>{m}</span>
+                  <span style={{fontSize:13,color:String(m).includes("★")?"#92400e":"var(--text2)",fontWeight:String(m).includes("★")?700:400}}>{d}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════ STEP 4: ASA ═══════ */}
+      {step===4&&(
+        <div>
+          <h2 style={{fontSize:20,fontWeight:700,color:"var(--primary)",marginBottom:5}}>Classificazione ASA</h2>
+          <p style={{color:"var(--text2)",fontSize:14,marginBottom:16}}>La validazione finale della classe ASA compete esclusivamente al medico anestesista</p>
+          <div style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:13,padding:15,marginBottom:22,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+            <span style={{fontSize:14,fontWeight:600,color:"var(--text)"}}>Classe ASA suggerita dall'anamnesi:</span>
+            <span style={{width:52,height:52,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",color:"white",fontWeight:700,fontSize:22,background:ASA_C[sASA],boxShadow:"0 3px 10px rgba(0,0,0,.2)"}}>{sASA}</span>
+            <span style={{fontSize:13,color:"var(--text2)"}}>L'anestesista può modificare la classificazione selezionando una diversa classe.</span>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+            {[
+              {v:1,l:"ASA 1",d:"Paziente in buona salute, senza patologie sistemiche, non fumatore, minimo uso di alcool."},
+              {v:2,l:"ASA 2",d:"Malattia sistemica lieve senza limitazioni funzionali: fumatore, gravidanza, BMI 30–40, DM/ipertensione controllati, BPCO lieve, IMA vecchio."},
+              {v:3,l:"ASA 3",d:"Malattia sistemica severa stabilizzata ma limitante: DM/ipertensione scarsamente controllati, BPCO mod/sev, BMI>40, PMK/ICD, FE ridotta, IRC dialisi, eventi cardiaci 3–12 mesi."},
+              {v:4,l:"ASA 4",d:"Malattia sistemica severa con costante pericolo di vita: IMA/ictus/stent <3 mesi, angina instabile, grave disfunzione valvolare/sistolica, aritmie refrattarie, shock, sepsi."},
+            ].map(opt=>(
+              <button key={opt.v} onClick={()=>setAsaO(opt.v)}
+                style={{textAlign:"left",borderRadius:14,padding:16,border:`2px solid ${fASA===opt.v?ASA_C[opt.v]:"var(--border)"}`,
+                  background:fASA===opt.v?ASA_C[opt.v]+"15":"white",cursor:"pointer",
+                  boxShadow:fASA===opt.v?`0 4px 14px ${ASA_C[opt.v]}35`:"var(--sh)",transition:"all .18s"}}>
+                <div style={{width:42,height:42,borderRadius:"50%",background:ASA_C[opt.v],color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:19,marginBottom:10,boxShadow:`0 3px 8px ${ASA_C[opt.v]}40`}}>{opt.v}</div>
+                <div style={{fontWeight:700,color:"var(--text)",marginBottom:6,fontSize:15}}>{opt.l}</div>
+                <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.55}}>{opt.d}</div>
+              </button>
+            ))}
+          </div>
+          {asaO!==null&&asaO!==sASA&&<InfoBox type="amber" title="⚠️ Classe ASA modificata manualmente">Classe selezionata (ASA {asaO}) diversa da quella suggerita dall'anamnesi (ASA {sASA}). Documentare la motivazione nella cartella clinica.</InfoBox>}
+          {fASA===4&&<InfoBox type="red" title="⛔ ASA 4 — Valutazione individuale obbligatoria">Questa classe richiede un'analisi caso per caso. Consultare il responsabile del percorso e valutare attentamente l'opportunità di procedere con la chirurgia elettiva.</InfoBox>}
+        </div>
+      )}
+
+      {/* ═══════ STEP 5: RISULTATI ═══════ */}
+      {step===5&&res&&(
+        <div className="print-page">
+          {/* COMPACT SUMMARY HEADER — B&W friendly */}
+          <div style={{border:"2px solid #222",borderRadius:8,padding:"8px 14px",marginBottom:8,background:"#fff"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:6}}>
+              <div style={{flex:1,minWidth:200}}>
+                <div style={{fontSize:14,fontWeight:700,lineHeight:1.2,marginBottom:4,color:"#111"}}>{proc?.name}</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:6,fontSize:11,color:"#333"}}>
+                  <span><strong>Complessità:</strong> {proc?.complexity}</span>
+                  <span>|</span>
+                  <span><strong>Rischio CV:</strong> {proc?.cardiacRisk}</span>
+                  {proc?.highBleedingRisk&&<><span>|</span><span><strong>Alto rischio emorragico</strong></span></>}
+                </div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{width:40,height:40,borderRadius:"50%",border:"2px solid #222",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontWeight:700,background:"#f5f5f5"}}>
+                  <span style={{fontSize:8,fontWeight:400,color:"#555"}}>ASA</span>
+                  <span style={{fontSize:17,color:"#111"}}>{fASA}</span>
+                </div>
+                <div style={{fontSize:11,color:"#333",lineHeight:1.5}}>
+                  METs: <strong>{mets==="lt4"?"< 4":mets==="gte4"?"≥ 4":"n.v."}</strong> · RCRI: <strong>{rcri}</strong>
+                  {effBmi>0&&<span> · BMI: <strong>{effBmi.toFixed(1)}</strong></span>}
+                </div>
+                {res.apa&&<span style={{padding:"2px 8px",borderRadius:4,fontSize:10,fontWeight:700,border:"1.5px solid #222"}}>APA</span>}
+              </div>
+            </div>
+          </div>
+
+          {/* MAIN EXAM BOX */}
+          <div className="card" style={{padding:10,marginBottom:8,border:"2px solid #222"}}>
+            <div style={{fontSize:14,fontWeight:700,color:"#111",marginBottom:2,textTransform:"uppercase",letterSpacing:.5}}>ESAMI E PROCEDURE DA RICHIEDERE</div>
+            <div style={{fontSize:10,color:"#555",marginBottom:8}}>Griglia ASA x Complessità Chirurgica (PDTA pag. 26-27)</div>
+
+            {res.ex.soloVisita&&!["B","C","D","E","F","G","ECG","EGA"].some(k=>res.ex[k])?(
+              <div style={{textAlign:"center",padding:"10px 12px",borderRadius:8,border:"1.5px solid #999"}}>
+                <div style={{fontWeight:700,color:"#111",fontSize:13,marginBottom:3}}>SOLO VISITA ANESTESIOLOGICA — Nessun esame richiesto</div>
+                <p style={{fontSize:11,color:"#333",margin:0}}>ASA {fASA} / Complessità {proc?.complexity}: nessun esame di routine indicato.</p>
+              </div>
+            ):(
+              <div>
+                {/* Prelievi ematochimici */}
+                {["B","C","D","E","F","G"].filter(k=>res.ex[k]).length>0&&(
+                  <div style={{marginBottom:6}}>
+                    <div style={{fontSize:10,fontWeight:700,color:"#111",marginBottom:3,textTransform:"uppercase",letterSpacing:.3}}>Prelievi Ematochimici</div>
+                    {["B","C","D","E","F","G"].filter(k=>res.ex[k]).map(k=>{
+                      const e=EI[k];
+                      return(
+                        <div key={k} style={{display:"flex",alignItems:"flex-start",gap:6,padding:"2px 0",borderBottom:"1px solid #ddd"}}>
+                          <span style={{fontSize:13,flexShrink:0,lineHeight:1}}>☐</span>
+                          <div>
+                            <span style={{fontWeight:700,fontSize:11,color:"#111"}}>{e.l}</span>
+                            <span style={{fontSize:10,color:"#555",marginLeft:4}}>{e.d}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {/* ECG */}
+                {res.ex.ECG&&(
+                  <div style={{display:"flex",alignItems:"flex-start",gap:6,padding:"2px 0",borderBottom:"1px solid #ddd"}}>
+                    <span style={{fontSize:13,flexShrink:0,lineHeight:1}}>☐</span>
+                    <span style={{fontWeight:700,fontSize:11,color:"#111"}}>ECG a riposo — refertato <span style={{fontWeight:400,color:"#555"}}>(validità 1 anno)</span></span>
+                  </div>
+                )}
+                {/* EGA */}
+                {res.ex.EGA&&(
+                  <div style={{marginBottom:4}}>
+                    <div style={{display:"flex",alignItems:"flex-start",gap:6,padding:"2px 0",borderBottom:"1px solid #ddd"}}>
+                      <span style={{fontSize:13,flexShrink:0,lineHeight:1}}>☐</span>
+                      <span style={{fontWeight:700,fontSize:11,color:"#111"}}>EGA in aria ambiente <span style={{fontWeight:400,color:"#555"}}>(ASA 3/4 con pat. respiratoria o OSAS)</span></span>
+                    </div>
+                    <div style={{marginLeft:19,marginTop:3,padding:"4px 8px",borderRadius:6,border:"1px solid #999",fontSize:10}}>
+                      <span style={{color:"#333"}}>Se EGA patologica → richiedere PFR (spirometria ± curva flusso-volume)</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* RX Torace */}
+            <div style={{display:"flex",alignItems:"flex-start",gap:6,padding:"2px 0",borderBottom:"1px solid #ddd"}}>
+              <span style={{fontSize:13,flexShrink:0,lineHeight:1}}>{res.rx.indicated?"☐":"—"}</span>
+              <span style={{fontSize:11,color:"#111"}}>
+                <strong>RX Torace</strong> {res.rx.indicated?<span style={{fontWeight:700}}>— INDICATA (val. 6 mesi){res.rx.reasons&&` (${res.rx.reasons.join("; ")})`}</span>:<span style={{color:"#888"}}>— Non indicata</span>}
+              </span>
+            </div>
+
+            {/* Consulenza Cardiologica */}
+            <div style={{display:"flex",alignItems:"flex-start",gap:6,padding:"2px 0",borderBottom:"1px solid #ddd"}}>
+              <span style={{fontSize:13,flexShrink:0,lineHeight:1}}>{res.card.indicated?"☐":"—"}</span>
+              <span style={{fontSize:11,color:"#111"}}>
+                <strong>Consulenza Cardiologica</strong> {res.card.indicated?<span style={{fontWeight:700}}> — {res.card.urgency==="urgente"?"*** URGENTE ***":"INDICATA"} — {res.card.reason}</span>:<span style={{color:"#888"}}> — Non indicata</span>}
+              </span>
+            </div>
+            {res.card.indicated&&res.card.bnp&&!a.fa&&(
+              <div style={{marginLeft:19,fontSize:10,color:"#333",padding:"1px 0",fontWeight:600}}>→ Eseguire BNP/NT-proBNP + Troponina prima della consulenza</div>
+            )}
+            {res.card.indicated&&a.fa&&(
+              <div style={{marginLeft:19,fontSize:10,color:"#333",padding:"1px 0",fontWeight:600}}>→ FA presente: BNP/NT-proBNP non indicato</div>
+            )}
+
+            {/* PBM */}
+            <div style={{display:"flex",alignItems:"flex-start",gap:6,padding:"2px 0",borderBottom:"1px solid #ddd"}}>
+              <span style={{fontSize:13,flexShrink:0,lineHeight:1}}>{res.pbm?"☐":"—"}</span>
+              <span style={{fontSize:11,color:"#111"}}>
+                <strong>PBM</strong> {res.pbm?<span style={{fontWeight:700}}> — ATTIVARE — invio SIMT almeno 20gg prima</span>:<span style={{color:"#888"}}> — Non indicato</span>}
+              </span>
+            </div>
+            {res.pbm&&(
+              <div style={{marginLeft:19,marginTop:2,marginBottom:4,padding:"4px 8px",border:"1px solid #999",borderRadius:6}}>
+                <div style={{fontSize:10,fontWeight:700,color:"#111",marginBottom:3}}>Bilancio Marziale:</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:2,fontSize:10,color:"#111"}}>
+                  {["Sideremia","Ferritina","Transferrina","% Sat. Transferrina","Vit. B12","Folati"].map(v=>(
+                    <span key={v} style={{display:"inline-flex",alignItems:"center",gap:3}}>☐ {v}{v!=="Folati"?" ·":""}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Validity */}
+            <div style={{borderTop:"1.5px solid #999",marginTop:6,paddingTop:4,display:"flex",gap:12,justifyContent:"center",fontSize:9,color:"#555"}}>
+              <span>Esami lab: 3 mesi</span><span>|</span><span>RX Torace: 6 mesi</span><span>|</span><span>ECG: 1 anno</span>
+            </div>
+          </div>
+
+          {/* CLINICAL ALERTS — compact inline */}
+          {(res.fr||a.icd||a.tia||(a.dapt||a.nao||a.avk)||(a.glp1&&a.glp1t))&&(
+            <div style={{padding:"6px 10px",marginBottom:6,border:"1.5px solid #555",borderRadius:6}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#111",textTransform:"uppercase",letterSpacing:.3,marginBottom:3}}>Segnalazioni Cliniche</div>
+              {res.fr&&<div style={{fontSize:10,color:"#333",padding:"1px 0"}}><strong>Fragilità (≥70):</strong> Screening CFS. Score 5-9 → geriatra.</div>}
+              {a.icd&&<div style={{fontSize:10,color:"#333",padding:"1px 0"}}><strong>ICD:</strong> Verifica device ultimi 6 mesi. Sede alta → elettrofisiologia.</div>}
+              {a.tia&&<div style={{fontSize:10,color:"#333",padding:"1px 0"}}><strong>TIA/Ictus &lt;6 mesi:</strong> Consulto neurologico + imaging. Stenosi ≥70% → rivascolarizzare prima.</div>}
+              {(a.dapt||a.nao||a.avk)&&<div style={{fontSize:10,color:"#333",padding:"1px 0"}}><strong>TAO/Antiaggregante:</strong> Gestione perioperatoria da valutare (PDTA pagg. 31-47).</div>}
+              {a.glp1&&a.glp1t&&<div style={{fontSize:10,color:"#333",padding:"1px 0"}}><strong>GLP-1 ({a.glp1t==="orale"?"orale":a.glp1t==="par_diabete"?"par. DM":"par. obesità"}):</strong> Sospendere {a.glp1t==="orale"?"24h":a.glp1t==="par_diabete"?"1 sett.":"2 sett."} prima. Stomaco pieno.</div>}
+            </div>
+          )}
+
+          {/* RCRI detail if cardio indicated — compact */}
+          {res.card.indicated&&(
+            <div style={{padding:"6px 10px",marginBottom:6,border:"1px solid #999",borderRadius:6}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#111",marginBottom:2}}>Consulenza Cardiologica — Dettaglio</div>
+              <div style={{fontSize:10,color:"#333",lineHeight:1.4,marginBottom:3}}>{res.card.detail}</div>
+              <div style={{fontSize:10,color:"#333"}}>
+                RCRI={rcri} · {[
+                  [a.ci,"CAD"],[a.hf,"IC"],[a.cv2,"Cerebro"],[a.ins,"DM ins."],[(Number(a.crcl)>0&&Number(a.crcl)<60)||a.dialisi,"IRC"]
+                ].map(([v,l])=>(v?"✓":"✗")+l).join(" · ")}
+              </div>
+            </div>
+          )}
+
+          {/* APA */}
+          {res.apa&&<div style={{padding:"4px 10px",marginBottom:6,borderRadius:6,border:"1px solid #555",fontSize:10,color:"#111"}}><strong>Candidato APA:</strong> ASA {fASA}, bassa complessità — idoneo per chirurgia ambulatoriale.</div>}
+
+          {/* RICHIESTE ULTERIORI */}
+          <div style={{padding:"8px 10px",marginBottom:6,border:"2px solid #222",borderRadius:6}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#111",marginBottom:6,textTransform:"uppercase",letterSpacing:.3}}>Richieste Ulteriori</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <div>
+                <div style={{fontSize:10,fontWeight:600,color:"#333",marginBottom:2}}>Esami / Procedure aggiuntive:</div>
+                <div style={{border:"1.5px solid #999",borderRadius:4,minHeight:45,padding:6,fontSize:11,color:"#111"}} contentEditable suppressContentEditableWarning/>
+              </div>
+              <div>
+                <div style={{fontSize:10,fontWeight:600,color:"#333",marginBottom:2}}>Motivazione:</div>
+                <div style={{border:"1.5px solid #999",borderRadius:4,minHeight:45,padding:6,fontSize:11,color:"#111"}} contentEditable suppressContentEditableWarning/>
+              </div>
+            </div>
+          </div>
+
+          {/* DATI PAZIENTE */}
+          <div style={{padding:"8px 10px",marginBottom:6,border:"2px solid #222",borderRadius:6}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#111",marginBottom:6,textTransform:"uppercase",letterSpacing:.3}}>Dati Paziente</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+              <div>
+                <div style={{fontSize:10,fontWeight:600,color:"#333",marginBottom:2}}>Cognome:</div>
+                <div style={{border:"1.5px solid #999",borderRadius:4,minHeight:24,padding:"4px 6px",fontSize:11}} contentEditable suppressContentEditableWarning/>
+              </div>
+              <div>
+                <div style={{fontSize:10,fontWeight:600,color:"#333",marginBottom:2}}>Nome:</div>
+                <div style={{border:"1.5px solid #999",borderRadius:4,minHeight:24,padding:"4px 6px",fontSize:11}} contentEditable suppressContentEditableWarning/>
+              </div>
+              <div>
+                <div style={{fontSize:10,fontWeight:600,color:"#333",marginBottom:2}}>Data di Nascita:</div>
+                <div style={{border:"1.5px solid #999",borderRadius:4,minHeight:24,padding:"4px 6px",fontSize:11}} contentEditable suppressContentEditableWarning/>
+              </div>
+            </div>
+          </div>
+
+          {/* Disclaimer + Firma */}
+          <div style={{padding:"4px 10px",marginBottom:6,borderLeft:"2px solid #555",fontSize:9,color:"#555",lineHeight:1.5}}>
+            <strong>DISCLAIMER:</strong> Supporto decisionale (PDTA aziendale). Indicazioni orientative, non vincolanti. Responsabilità clinica in capo al medico (L. 24/2017). Dati non registrati.
+          </div>
+          <div style={{display:"flex",gap:30,padding:"10px 0",marginBottom:8,fontSize:12,color:"#111"}}>
+            <div>Data: _______________</div>
+            <div style={{flex:1}}>Firma del Medico: ___________________________</div>
+          </div>
+
+          <div className="np" style={{display:"flex",gap:12}}>
+            <button className="btn btn-s" onClick={rst} style={{flex:1}}>← Nuova Valutazione</button>
+            <button className="btn btn-p" onClick={()=>window.print()} style={{flex:1}}>🖨 Stampa / Esporta PDF</button>
+          </div>
+        </div>
+      )}
+
+      {/* NAV BUTTONS */}
+      {pw==="standard"&&step>0&&step<5&&(
+        <div className="np" style={{display:"flex",justifyContent:"space-between",marginTop:22,gap:10}}>
+          <button className="btn btn-s" onClick={()=>step===1?(setStep(0),setPw(null)):setStep(s=>s-1)}>← Indietro</button>
+          <button className="btn btn-p" disabled={!ok()} onClick={()=>setStep(s=>s+1)}>
+            {step===4?"Vedi Risultati →":"Avanti →"}
+          </button>
+        </div>
+      )}
+
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
